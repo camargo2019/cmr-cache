@@ -1,0 +1,11 @@
+connect:
+  max-clients: 100 # max clients
+  auth:
+    allow-ip: # Remove makes it accept all IPs
+      - localhost
+      - 127.0.0.1
+
+    basic: # Auth basic
+      - user: admin
+        pass: admin
+        db: cache # "*" releases connection in all db

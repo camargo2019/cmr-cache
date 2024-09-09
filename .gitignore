@@ -1,0 +1,7 @@
+build*
+*.exe
+data/*.dat
+.env*
+.vscode/*
+*.pdb
+*.ilk
