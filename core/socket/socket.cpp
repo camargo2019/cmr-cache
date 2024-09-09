@@ -27,10 +27,6 @@ CoreSocket::CoreSocket(boost::asio::io_context& io_context, std::string ip, shor
         accept();
 }
 
-void CoreSocket::removeClient(){
-    --client_;
-}
-
 void CoreSocket::accept() {
     acceptor_.async_accept(
         [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {

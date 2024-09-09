@@ -1,0 +1,29 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: sudo apt-get install -y libboost-all-dev
+
+      - name: Set up Clang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+
+      - name: Build
+        run: |
+          clang++ -o cmr_cache main.cpp -I./vendor/yaml -I/usr/local/include/boost -L/usr/local/lib -lboost_system -lpthread -Wmissing-declarations

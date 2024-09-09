@@ -34,7 +34,6 @@
     class CoreSocket: public std::enable_shared_from_this<CoreSocket> {
         public:
             CoreSocket(boost::asio::io_context& io_context, std::string, short port, Cache& cache_);
-            void removeClient();
             
         private:
             void accept();
