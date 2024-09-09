@@ -74,7 +74,6 @@ bool Cache::set(std::string db, std::string key, std::string value, int expire){
     data.expire = expire;
 
     cache_[db][key] = data;
-    save();
 
     return true;
 }
@@ -83,7 +82,6 @@ bool Cache::del(std::string db, std::string key){
     if (cache_.find(db) != cache_.end()) {
         if (cache_[db].find(key) != cache_[db].end()){
             cache_[db].erase(key);
-            save();
 
             return true;
         }
