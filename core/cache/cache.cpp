@@ -90,6 +90,16 @@ bool Cache::del(std::string db, std::string key){
     return false;
 }
 
+std::vector<std::string> Cache::keys(std::string db){
+    std::vector<std::string> keys;
+
+    for (const auto& row: cache_[db]){
+        keys.push_back(row.first);
+    }
+
+    return keys;
+}
+
 void Cache::save(){
     std::ofstream file("data/databases.dat");
     

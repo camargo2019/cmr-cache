@@ -52,6 +52,7 @@
             std::string get(std::string db, std::string key);
             bool set(std::string db, std::string key, std::string value, int expire = -1);
             bool del(std::string db, std::string key);
+            std::vector<std::string> keys (std::string db);
             void save();
 
         private:

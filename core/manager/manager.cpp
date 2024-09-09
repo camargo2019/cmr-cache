@@ -92,6 +92,10 @@ void Manager::invokeAction(){
         invokeDel(args);
     }
 
+    if (std::find(commands.keys.begin(), commands.keys.end(), command) != commands.keys.end()) {
+        invokeKeys(args);
+    }
+
     data_.clear();
 }
 
@@ -161,7 +165,7 @@ void Manager::invokeUse(std::vector<std::string> args){
 }
 
 void Manager::invokeAuth(std::vector<std::string> args){
-    if (!user.user.empty() && !user.db.empty()) return result(std::string("ERROR: you are not authenticated"));
+    if (!user.user.empty() && !user.db.empty()) return result(std::string("ERROR: you are authenticated"));
     if (args[0].empty() || args[1].empty()) return result(std::string("ERROR: use AUTH USER PASS"));
 
     for (const auto& auth : ConfigConn.auth.basic) {
@@ -174,6 +178,19 @@ void Manager::invokeAuth(std::vector<std::string> args){
     }
 
     result(std::string("ERROR: failed to authenticate"));
+}
+
+void Manager::invokeKeys(std::vector<std::string> args){
+    if (user.user.empty() && user.db.empty()) return result(std::string("ERROR: you need to authenticate"));
+    if (user.db == "*") return result(std::string("ERROR: use the `USE DB` command to choose the name of the database instance"));
+
+    std::string messageKeys;
+    std::vector<std::string> keys = cache_.keys(user.db);
+    for (const std::string& key : keys) {
+        messageKeys += key + "\n";
+    }
+
+    return result(std::string("SUCCESS: \r\n" + messageKeys));
 }
 
 void Manager::scheduleSave(){
