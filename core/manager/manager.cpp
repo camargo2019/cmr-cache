@@ -119,7 +119,7 @@ void Manager::invokeSet(std::vector<std::string> args){
         try {
             expire = std::stoi(args[2]);
         }catch (std::exception& e){
-            std::cout << "Failed: " << args[0] << " " << args[1] << " " << args[2] << " | " << e.what() << std::endl;
+            std::cout << "Failed: " << e.what() << std::endl;
         }
     }
 

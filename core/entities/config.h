@@ -58,20 +58,20 @@
 
                 Yaml::Node& connect = root["connect"];
                 if (connect.IsMap() == false){
-                    throw std::exception("ERROR: We can't find connect in config/connect.yaml");
+                    throw std::runtime_error("ERROR: We can't find connect in config/connect.yaml");
                 }
 
                 config_connect.max_clients = connect["max-clients"].As<int>();
 
                 Yaml::Node& auth = connect["auth"];
                 if (auth.IsMap() == false){
-                    throw std::exception("ERROR: We can't find auth in config/connect.yaml");
+                    throw std::runtime_error("ERROR: We can't find auth in config/connect.yaml");
                 }
 
                 Yaml::Node& authIPs = auth["allow-ip"];
 
                 if (authIPs.IsSequence() == false){
-                    throw std::exception("ERROR: allow-ip is not a sequence in config/connect.yaml");
+                    throw std::runtime_error("ERROR: allow-ip is not a sequence in config/connect.yaml");
                 }
 
                 for (auto aIP = authIPs.Begin(); aIP != authIPs.End(); aIP++){
@@ -81,7 +81,7 @@
                 Yaml::Node& basicAuth = auth["basic"];
 
                 if (basicAuth.IsSequence() == false){
-                    throw std::exception("ERROR: basic-auth is not a sequence in config/connect.yaml");
+                    throw std::runtime_error("ERROR: basic-auth is not a sequence in config/connect.yaml");
                 }
 
                 for (auto bAuth = basicAuth.Begin(); bAuth != basicAuth.End(); bAuth++){
@@ -104,7 +104,7 @@
 
                 Yaml::Node& rootHost = root["host"];
                 if (rootHost.IsMap() == false){
-                    throw std::exception("ERROR: We can't find the host in config/host.yaml");
+                    throw std::runtime_error("ERROR: We can't find the host in config/host.yaml");
                 }
 
                 host.address = rootHost["address"].As<std::string>();
