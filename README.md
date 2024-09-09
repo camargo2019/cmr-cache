@@ -85,14 +85,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 
 ## 📚 Comandos Suportados
 
-| Comando                | Descrição                                                |
-|------------------------|----------------------------------------------------------|
+| Comando                | Descrição                                                 |
+|------------------------|-----------------------------------------------------------|
 | `SET key value`         | Define um valor para a chave                             |
 | `SET key value expire`  | Define um valor com tempo de expiração                   |
 | `GET key`               | Retorna o valor associado à chave                        |
 | `DEL key`               | Remove uma chave                                         |
 | `AUTH user password`    | Autentica o usuário com a senha                          |
 | `USE database`          | Especifica qual banco de dados será utilizado            |
+| `KEYS`                  | Lista todas as chaves registradas                        |
 
 ## 🌟 Contribuindo
 

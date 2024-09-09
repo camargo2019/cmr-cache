@@ -24,6 +24,7 @@
 
     #include <string>
     #include <string>
+    #include <vector>
     #include <memory>
     #include <chrono>
     #include <iostream>
@@ -40,6 +41,7 @@
         std::vector<std::string> get = {"GET", "get"};
         std::vector<std::string> auth = {"AUTH", "auth"};
         std::vector<std::string> use = {"USE", "use"};
+        std::vector<std::string> keys = {"KEYS", "keys"};
     };
 
 
@@ -59,6 +61,7 @@
             void invokeGet(std::vector<std::string> args);
             void invokeAuth(std::vector<std::string> args);
             void invokeUse(std::vector<std::string> args);
+            void invokeKeys(std::vector<std::string> args);
             void scheduleSave();
 
             boost::asio::ip::tcp::socket socket_;
