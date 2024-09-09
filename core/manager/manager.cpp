@@ -66,11 +66,36 @@ void Manager::invokeAction(){
     std::string command;
     std::string value;
     std::vector<std::string> args;
-    request >> command;
+    char quote = '\0';
 
-    while (request >> value) {
+    while (request >> std::ws) {
+        char peekStream = request.peek();
+
+        if (peekStream == '"' || peekStream == '\'') {
+            quote = request.get();
+
+            char c;
+            value.clear();
+            while (request.get(c)) {
+                if (c == '\\') {
+                    char nextChar;
+                    request.get(nextChar);
+                    value.push_back(nextChar);
+                } else if (c == quote) {
+                    break;
+                } else {
+                    value.push_back(c);
+                }
+            }
+        } else {
+            request >> value;
+        }
+
         args.push_back(value);
     }
+
+    command = args[0];
+    args.erase(std::remove(args.begin(), args.end(), command), args.end());
 
     if (std::find(commands.auth.begin(), commands.auth.end(), command) != commands.auth.end()) {
         invokeAuth(args);
