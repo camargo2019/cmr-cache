@@ -23,6 +23,7 @@
     #define CORE_CACHE_H
 
     #include <string>
+    #include <vector>
     #include <fstream>
     #include <unordered_map>
 
