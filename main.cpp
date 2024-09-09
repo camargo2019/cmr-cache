@@ -23,6 +23,7 @@
 
 int main(){
     Cache cache_;
+    cache_.expire();
 
     try {
         boost::asio::io_context io_context;

@@ -129,3 +129,20 @@ void Cache::save(){
         }
     }
 }
+
+void Cache::expire(){
+    std::thread([this]() {
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            for (auto& row: cache_) {
+                for (auto& item: row.second) {
+                    if (item.second.expire == 0){
+                        del(row.first, item.first);
+                    }else if(item.second.expire > 0){
+                        --item.second.expire;
+                    }
+                }
+            }
+        }
+    }).detach();
+}

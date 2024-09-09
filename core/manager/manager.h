@@ -23,7 +23,6 @@
     #define CORE_MANAGER_H
 
     #include <string>
-    #include <string>
     #include <vector>
     #include <memory>
     #include <chrono>

@@ -1,7 +1,7 @@
 ## 📌 Tarefas Pendentes
 
 ### Funcionalidades
-- [ ] Implementar expiração dos valores ao utilizar o comando `SET key value expire`.
+- [x] Implementar expiração dos valores ao utilizar o comando `SET key value expire`.
 
 ### Melhorias
 - [ ] Melhorar o método de salvamento dos dados no arquivo `.dat`.
