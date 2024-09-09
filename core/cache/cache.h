@@ -24,6 +24,8 @@
 
     #include <string>
     #include <vector>
+    #include <thread>
+    #include <chrono>
     #include <fstream>
     #include <unordered_map>
 
@@ -55,6 +57,7 @@
             bool del(std::string db, std::string key);
             std::vector<std::string> keys (std::string db);
             void save();
+            void expire();
 
         private:
             std::unordered_map<std::string, std::unordered_map<std::string, CacheStruct>> cache_;
