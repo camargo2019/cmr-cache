@@ -26,4 +26,4 @@ jobs:
 
       - name: Build
         run: |
-          clang++ -o cmr_cache main.cpp -I./vendor/yaml -I/usr/local/include/boost -L/usr/local/lib -lboost_system -lpthread -Wmissing-declarations
+          clang++ -o cmr_cache main.cpp -I./vendor/yaml -I/usr/local/include/boost -L/usr/local/lib -lboost_system -lpthread -std=c++17
