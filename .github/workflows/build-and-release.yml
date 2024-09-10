@@ -43,24 +43,6 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: clang++ -o cmr_cache main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17
 
-      - name: Create Release Archive - Windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          mkdir -p release
-          cp cmr_cache.exe release/
-          cp -r config/ release/
-          cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
-
-      - name: Create Release Archive - Others OS
-        if: matrix.os != 'windows-latest'
-        run: |
-          mkdir -p release
-          cp cmr_cache release/
-          cp -r config/ release/
-          cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz release
-
       - name: Get the tag
         run: echo "GITHUB_REF=${{ github.ref }}"
 
@@ -75,6 +57,24 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release Archive - Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir -p release
+          cp cmr_cache.exe release/
+          cp -r config/ release/
+          cp -r data/ release/
+          tar -czf cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz release
+
+      - name: Create Release Archive - Others OS
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p release
+          cp cmr_cache release/
+          cp -r config/ release/
+          cp -r data/ release/
+          tar -czf cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz release
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
