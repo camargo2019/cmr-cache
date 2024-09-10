@@ -35,15 +35,9 @@ jobs:
       - name: Install dependencies
         run: ${{ matrix.install }}
 
-      - name: Set up Boost environment
-        if: matrix.os == 'windows-latest'
-        run: |
-          echo "BOOST_INCLUDE_PATH=$(pwd)/boost/boost" >> $GITHUB_ENV
-          echo "BOOST_LIBRARY_PATH=$(pwd)/boost/lib" >> $GITHUB_ENV
-
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I$BOOST_INCLUDE_PATH -L$BOOST_LIBRARY_PATH -llibboost_system-vc143-mt-x64-1_85 -std=c++17
+        run: clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I./boost/ -L./boost/lib -llibboost_system-vc143-mt-x64-1_85 -std=c++17
       
       - name: Build Others
         if: matrix.os != 'windows-latest'
