@@ -32,22 +32,22 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: egor-tensin/setup-clang@v1
 
+      - name: Install dependencies
+        run: ${{ matrix.install }}
+
       - name: Set up Boost environment
         if: matrix.os == 'windows-latest'
         run: |
           echo "BOOST_INCLUDE_PATH=$(pwd)/boost/boost" >> $GITHUB_ENV
           echo "BOOST_LIBRARY_PATH=$(pwd)/boost/lib" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: ${{ matrix.install }}
-
-      - name: Build project
-        run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I$BOOST_INCLUDE_PATH -L$BOOST_LIBRARY_PATH -llibboost_system-vc143-mt-x64-1_85 -std=c++17
-          else
-            clang++ -o cmr_cache main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17 -O3
-          fi
+      - name: Build Windows
+        if: matrix.os == "windows-latest"
+        run: clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I$BOOST_INCLUDE_PATH -L$BOOST_LIBRARY_PATH -llibboost_system-vc143-mt-x64-1_85 -std=c++17
+      
+      - name: Build Others
+        if: matrix.os != "windows-latest"
+        run: clang++ -o cmr_cache main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17
 
       - name: Create Release Archive
         run: |
