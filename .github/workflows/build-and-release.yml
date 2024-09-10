@@ -17,9 +17,8 @@ jobs:
           - os: windows-latest
             install: |
                    choco install llvm
-                   powershell -Command "Invoke-WebRequest -Uri 'https://boostorg.jfrog.io/artifactory/main/release/1.80.0/binaries/boost_1_80_0-msvc-14.1-64.exe' -OutFile 'boost_installer.exe'"
-                   powershell -Command "Start-Process 'boost_installer.exe' -ArgumentList '/S' -Wait"
-                   set PATH=C:\local\boost_1_80_0\lib64-msvc-14.1;%PATH%
+                   curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
+                   unzip boost.zip -d boost
           - os: fedora-latest
             install: sudo dnf install -y clang boost-devel
           - os: centos-latest
@@ -33,13 +32,19 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: egor-tensin/setup-clang@v1
 
+      - name: Set up Boost environment
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "BOOST_INCLUDE_PATH=$(pwd)/boost/boost" >> $GITHUB_ENV
+          echo "BOOST_LIBRARY_PATH=$(pwd)/boost/lib" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: ${{ matrix.install }}
 
       - name: Build project
         run: |
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I"C:/local/boost_1_80_0" -L"C:/local/boost_1_80_0/lib64-msvc-14.1" -lboost_system-vc141-mt-x64-1_80 -lpthread -std=c++17 -O3
+            clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I$BOOST_INCLUDE_PATH -L$BOOST_LIBRARY_PATH -llibboost_system-vc143-mt-x64-1_85 -std=c++17
           else
             clang++ -o cmr_cache main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17 -O3
           fi
