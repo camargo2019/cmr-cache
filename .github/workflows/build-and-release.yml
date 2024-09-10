@@ -42,11 +42,11 @@ jobs:
           echo "BOOST_LIBRARY_PATH=$(pwd)/boost/lib" >> $GITHUB_ENV
 
       - name: Build Windows
-        if: matrix.os == "windows-latest"
+        if: matrix.os == 'windows-latest'
         run: clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -I$BOOST_INCLUDE_PATH -L$BOOST_LIBRARY_PATH -llibboost_system-vc143-mt-x64-1_85 -std=c++17
       
       - name: Build Others
-        if: matrix.os != "windows-latest"
+        if: matrix.os != 'windows-latest'
         run: clang++ -o cmr_cache main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17
 
       - name: Create Release Archive
