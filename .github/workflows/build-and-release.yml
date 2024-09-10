@@ -41,7 +41,7 @@ jobs:
       
       - name: Build - Others OS
         if: matrix.os != 'windows-latest'
-        run: clang++ -o cmr_cache main.cpp -I/usr/include/boost -L/usr/lib/x86_64-linux-gnu -lboost_system -lpthread -std=c++17
+        run: clang++ -o cmr_cache main.cpp -I./vendor/yaml -I/usr/include/boost -L/usr/lib/x86_64-linux-gnu -lboost_system -lpthread -std=c++17
 
       - name: Get the tag
         run: echo "GITHUB_REF=${{ github.ref }}"
