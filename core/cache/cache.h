@@ -27,9 +27,10 @@
     #include <thread>
     #include <chrono>
     #include <fstream>
+    #include <filesystem>
     #include <unordered_map>
 
-    typedef struct CacheStruct {
+    struct CacheStruct {
         std::string value;
         int expire;
 
