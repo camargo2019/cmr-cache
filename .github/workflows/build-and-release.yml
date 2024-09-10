@@ -53,21 +53,6 @@ jobs:
           cp -r data/ release/
           tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
 
-      - name: Get the tag
-        run: echo "GITHUB_REF=${{ github.ref }}"
-
-      - name: Extract the tag name
-        id: extract_tag
-        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
-
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create Release Archive - Others OS
         if: matrix.os != 'windows-latest'
         run: |
@@ -76,6 +61,13 @@ jobs:
           cp -r config/ release/
           cp -r data/ release/
           tar -czf cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz release
+
+      - name: Get the tag
+        run: echo "GITHUB_REF=${{ github.ref }}"
+
+      - name: Extract the tag name
+        id: extract_tag
+        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         id: create_release
