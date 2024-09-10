@@ -28,26 +28,26 @@
     #include <stdexcept>
     #include <yaml.cpp>
 
-    typedef struct {
+    struct ConfigConnectBasicAuth{
         std::string user;
         std::string pass;
         std::string db;
-    } ConfigConnectBasicAuth;
+    };
 
-    typedef struct {
+    struct ConfigConnectAuth{
         std::vector<std::string> allow_ip;
         std::vector<ConfigConnectBasicAuth> basic;
-    } ConfigConnectAuth;
+    };
 
-    typedef struct {
+    struct ConfigConnect{
         int max_clients;
        ConfigConnectAuth auth;
-    } ConfigConnect;
+    };
 
-    typedef struct {
+    struct ConfigHosting{
         std::string address;
         short port;
-    } ConfigHosting;
+    };
 
     class Config {
         public:

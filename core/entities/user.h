@@ -24,7 +24,7 @@
 
     #include <string>
 
-    typedef struct UserEntities {
+    struct UserEntities {
         std::string user;
         std::string db;
     };

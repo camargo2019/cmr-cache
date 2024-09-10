@@ -34,7 +34,7 @@
     #include "../entities/user.h"
     #include "../entities/config.h"
 
-    typedef struct ManagerCommands {
+    struct ManagerCommands {
         std::vector<std::string> set = {"SET", "set"};
         std::vector<std::string> del = {"DEL", "del"};
         std::vector<std::string> get = {"GET", "get"};
