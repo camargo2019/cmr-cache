@@ -23,8 +23,9 @@
 
 CoreSocket::CoreSocket(boost::asio::io_context& io_context, std::string ip, short port, Cache& cache_)
     : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)),
-      cache_(cache_), client_(0) {
+      cache_(cache_), client_(0), socket_(io_context) {
         accept();
+        ping();
 }
 
 void CoreSocket::accept() {
@@ -47,3 +48,14 @@ void CoreSocket::accept() {
     );
 }
 
+void CoreSocket::ping() {
+    std::thread([this](){
+        while (true) {
+            if (socket_.is_open()) {
+                boost::asio::write(socket_, boost::asio::buffer(std::string("PING\r\n")));
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
+    }).detach();
+}

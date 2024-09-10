@@ -37,10 +37,12 @@
             
         private:
             void accept();
+            void ping();
 
-            boost::asio::ip::tcp::acceptor acceptor_;
             Cache& cache_;
             std::atomic<int> client_;
+            boost::asio::ip::tcp::socket socket_;
+            boost::asio::ip::tcp::acceptor acceptor_;
             ConfigConnect ConfigConn = Config::getConfigConnect();
     };
 
