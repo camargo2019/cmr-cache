@@ -22,37 +22,41 @@
 #include "cache.h"
 
 Cache::Cache(){
-    std::ifstream file("data/databases.dat");
-    if (file.is_open()){
-        size_t cacheSize;
-        file.read(reinterpret_cast<char*>(&cacheSize), sizeof(cacheSize));
+    for (const auto& row: std::filesystem::directory_iterator("data")){
+        if (row.path().extension() != ".dat") continue;
 
-        for (size_t i = 0; i < cacheSize; ++i) {
-            std::string key;
-            size_t keySize;
-            file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
-            key.resize(keySize);
-            file.read(&key[0], keySize);
+        std::ifstream file(row.path(), std::ios::binary);
+        if (file.is_open()){
+            size_t cacheSize;
+            file.read(reinterpret_cast<char*>(&cacheSize), sizeof(cacheSize));
 
-            std::unordered_map<std::string, CacheStruct> map;
+            for (size_t i = 0; i < cacheSize; ++i) {
+                std::string key;
+                size_t keySize;
+                file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+                key.resize(keySize);
+                file.read(&key[0], keySize);
 
-            size_t mapSize;
-            file.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+                std::unordered_map<std::string, CacheStruct> map;
 
-            for (size_t f = 0; f < mapSize; ++f) {
-                std::string itemKey;
-                size_t itemKeySize;
-                file.read(reinterpret_cast<char*>(&itemKeySize), sizeof(itemKeySize));
-                itemKey.resize(itemKeySize);
-                file.read(&itemKey[0], itemKeySize);
+                size_t mapSize;
+                file.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
 
-                CacheStruct cacheStruct;
-                cacheStruct.deserialize(file);
+                for (size_t f = 0; f < mapSize; ++f) {
+                    std::string itemKey;
+                    size_t itemKeySize;
+                    file.read(reinterpret_cast<char*>(&itemKeySize), sizeof(itemKeySize));
+                    itemKey.resize(itemKeySize);
+                    file.read(&itemKey[0], itemKeySize);
 
-                map[itemKey] = cacheStruct;
+                    CacheStruct cacheStruct;
+                    cacheStruct.deserialize(file);
+
+                    map[itemKey] = cacheStruct;
+                }
+
+                cache_[key] = map;
             }
-
-            cache_[key] = map;
         }
     }
 }
@@ -101,14 +105,18 @@ std::vector<std::string> Cache::keys(std::string db){
 }
 
 void Cache::save(){
-    std::ofstream file("data/databases.dat");
+    std::filesystem::create_directory("data");
     
     size_t cacheSize = cache_.size();
-    file.write(reinterpret_cast<const char*>(&cacheSize), sizeof(cacheSize));
 
     for (const auto& row: cache_) {
         const std::string& key = row.first;
         const std::unordered_map<std::string, CacheStruct>& map = row.second;
+
+        std::string filename = "data/" + key + ".dat";
+        std::ofstream file(filename, std::ios::binary);
+
+        file.write(reinterpret_cast<const char*>(&cacheSize), sizeof(cacheSize));
 
         size_t keySize = key.size();
         file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
@@ -127,6 +135,8 @@ void Cache::save(){
 
             cachedata.serialize(file);
         }
+
+        file.close();
     }
 }
 
