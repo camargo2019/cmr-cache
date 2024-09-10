@@ -50,8 +50,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         id: extract_tag-win
         run: |
-           $TAG_NAME = ${env:GITHUB_REF} -replace 'refs/tags/', ''
-           echo "TAG_NAME=$TAG_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
+            pwsh -Command "$TAG_NAME = '${env:GITHUB_REF}' -replace 'refs/tags/', ''; echo 'TAG_NAME=$TAG_NAME' | Out-File -FilePath '$env:GITHUB_ENV' -Append"
         shell: bash
 
       - name: Extract the tag name - Others OS
