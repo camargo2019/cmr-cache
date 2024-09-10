@@ -46,20 +46,9 @@ jobs:
       - name: Get the tag
         run: echo "GITHUB_REF=${{ github.ref }}"
 
-      - name: Extract the tag name - Windows
-        if: matrix.os == 'windows-latest'
-        id: extract_tag-win
-        run: |
-           pwsh -Command "$TAG_NAME = '${env:GITHUB_REF}' -replace 'refs/tags/', ''; [System.IO.File]::WriteAllText('$env:GITHUB_ENV', \"TAG_NAME=$TAG_NAME`n\", [System.Text.Encoding]::UTF8)"
-        shell: bash
-
-      - name: Extract the tag name - Others OS
-        if: matrix.os != 'windows-latest'
+      - name: Extract the tag name
         id: extract_tag
-        run: |
-           TAG_NAME=${GITHUB_REF#refs/tags/}
-           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
-        shell: bash
+        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         id: create_release
@@ -76,7 +65,7 @@ jobs:
           cp cmr_cache.exe release/
           cp -r config/ release/
           cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz release
+          tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
 
       - name: Create Release Archive - Others OS
         if: matrix.os != 'windows-latest'
@@ -85,14 +74,14 @@ jobs:
           cp cmr_cache release/
           cp -r config/ release/
           cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz release
+          tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
-          asset_name: cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
+          asset_path: cmr_cache_${{ matrix.os }}.tar.gz
+          asset_name: cmr_cache_${{ matrix.os }}.tar.gz
           asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
