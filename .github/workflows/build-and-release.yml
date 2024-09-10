@@ -48,7 +48,10 @@ jobs:
 
       - name: Extract the tag name
         id: extract_tag
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "TAG_NAME=${TAG_NAME}"
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         id: create_release
@@ -56,7 +59,7 @@ jobs:
         with:
           tag_name: ${{ env.TAG_NAME }}
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release Archive - Windows
         if: matrix.os == 'windows-latest'
@@ -83,3 +86,5 @@ jobs:
           asset_path: cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
           asset_name: cmr_cache_${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
           asset_content_type: application/gzip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
