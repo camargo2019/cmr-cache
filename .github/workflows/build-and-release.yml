@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, fedora-latest, centos-latest]
+        os: [ubuntu-latest, windows-latest]
         include:
           - os: ubuntu-latest
             install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
