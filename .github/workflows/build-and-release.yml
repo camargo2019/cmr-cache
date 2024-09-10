@@ -46,12 +46,21 @@ jobs:
       - name: Get the tag
         run: echo "GITHUB_REF=${{ github.ref }}"
 
-      - name: Extract the tag name
+      - name: Extract the tag name - Windows
+        if: matrix.os == 'windows-latest'
+        id: extract_tag-win
+        run: |
+           $TAG_NAME = ${env:GITHUB_REF} -replace 'refs/tags/', ''
+           echo "TAG_NAME=$TAG_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: bash
+
+      - name: Extract the tag name - Others OS
+        if: matrix.os != 'windows-latest'
         id: extract_tag
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "TAG_NAME=${TAG_NAME}"
-          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+           TAG_NAME=${GITHUB_REF#refs/tags/}
+           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+        shell: bash
 
       - name: Create GitHub Release
         id: create_release
