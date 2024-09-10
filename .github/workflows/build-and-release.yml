@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, fedora-latest, centos-latest]
+        include:
+          - os: ubuntu-latest
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
+          - os: windows-latest
+            install: choco install llvm boost-msvc
+          - os: fedora-latest
+            install: sudo dnf install -y clang boost-devel
+          - os: centos-latest
+            install: sudo yum install -y clang boost-devel
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Clang
+        if: matrix.os == 'windows-latest'
+        uses: egor-tensin/setup-clang@v9
+
+      - name: Install dependencies
+        run: ${{ matrix.install }}
+
+      - name: Build project
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            clang++ -o cmr_cache.exe main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17 -O3
+          else
+            clang++ -o cmr_cache main.cpp -I./vendor/yaml -lboost_system -lpthread -std=c++17 -O3
+          fi
+
+      - name: Create Release Archive
+        run: |
+          mkdir -p release
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            cp cmr_cache.exe release/
+          else
+            cp cmr_cache release/
+          fi
+          tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
+
+      - name: Upload Release Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: cmr_cache_${{ matrix.os }}
+          path: cmr_cache_${{ matrix.os }}.tar.gz
