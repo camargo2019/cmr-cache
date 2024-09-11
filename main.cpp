@@ -35,7 +35,5 @@ int main(){
         std::cerr << "Exception: " << e.what() << "\n";
     }
 
-    cache_.save();
-
     return 0;
 }

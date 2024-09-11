@@ -22,6 +22,8 @@
 #include "cache.h"
 
 Cache::Cache(){
+    std::filesystem::create_directory("data");
+
     for (const auto& row: std::filesystem::directory_iterator("data")){
         if (row.path().extension() != ".dat") continue;
 
@@ -61,40 +63,34 @@ Cache::Cache(){
     }
 }
 
-std::string Cache::get(std::string db, std::string key){
-    if (cache_.find(db) != cache_.end()) {
-        if (cache_[db].find(key) != cache_[db].end()){
-            return cache_[db][key].value;
+std::string Cache::get(const std::string& db, const std::string& key) noexcept {
+    auto data = cache_.find(db);
+    if (data != cache_.end()) {
+        auto value = data->second.find(key);
+        if (value != data->second.end()){
+            return value->second.value;
         }
     }
 
     return "";
 }
 
-bool Cache::set(std::string db, std::string key, std::string value, int expire){
-
-    CacheStruct data;
-    data.value = value;
-    data.expire = expire;
-
-    cache_[db][key] = data;
+bool Cache::set(const std::string& db, const std::string& key, const std::string& value, int expire) noexcept {
+    CacheStruct data{std::move(value), expire};
+    cache_[db].insert_or_assign(key, std::move(data));
+    isChange = true;
 
     return true;
 }
 
-bool Cache::del(std::string db, std::string key){
-    if (cache_.find(db) != cache_.end()) {
-        if (cache_[db].find(key) != cache_[db].end()){
-            cache_[db].erase(key);
-
-            return true;
-        }
-    }
+bool Cache::del(const std::string& db, const std::string& key) noexcept {
+    cache_[db].erase(key);
+    isChange = true;
 
     return false;
 }
 
-std::vector<std::string> Cache::keys(std::string db){
+std::vector<std::string> Cache::keys(const std::string& db) noexcept {
     std::vector<std::string> keys;
 
     for (const auto& row: cache_[db]){
@@ -104,43 +100,47 @@ std::vector<std::string> Cache::keys(std::string db){
     return keys;
 }
 
-void Cache::save(){
-    std::filesystem::create_directory("data");
-    
-    size_t cacheSize = cache_.size();
+void Cache::save() noexcept {
+    if (isChange) {
+        std::filesystem::create_directory("data");
+        
+        size_t cacheSize = cache_.size();
 
-    for (const auto& row: cache_) {
-        const std::string& key = row.first;
-        const std::unordered_map<std::string, CacheStruct>& map = row.second;
+        for (const auto& row: cache_) {
+            const std::string& key = row.first;
+            const std::unordered_map<std::string, CacheStruct>& map = row.second;
 
-        std::string filename = "data/" + key + ".dat";
-        std::ofstream file(filename, std::ios::binary);
+            std::string filename = "data/" + key + ".dat";
+            std::ofstream file(filename, std::ios::binary);
 
-        file.write(reinterpret_cast<const char*>(&cacheSize), sizeof(cacheSize));
+            file.write(reinterpret_cast<const char*>(&cacheSize), sizeof(cacheSize));
 
-        size_t keySize = key.size();
-        file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
-        file.write(key.data(), keySize);
+            size_t keySize = key.size();
+            file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
+            file.write(key.data(), keySize);
 
-        size_t mapSize = map.size();
-        file.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+            size_t mapSize = map.size();
+            file.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
 
-        for (const auto& rowPair: map) {
-            const std::string& pairKey = rowPair.first;
-            const CacheStruct& cachedata = rowPair.second;
+            for (const auto& rowPair: map) {
+                const std::string& pairKey = rowPair.first;
+                const CacheStruct& cachedata = rowPair.second;
 
-            size_t pairKeySize = pairKey.size();
-            file.write(reinterpret_cast<const char*>(&pairKeySize), sizeof(pairKeySize));
-            file.write(pairKey.data(), pairKeySize);
+                size_t pairKeySize = pairKey.size();
+                file.write(reinterpret_cast<const char*>(&pairKeySize), sizeof(pairKeySize));
+                file.write(pairKey.data(), pairKeySize);
 
-            cachedata.serialize(file);
+                cachedata.serialize(file);
+            }
+
+            file.close();
         }
 
-        file.close();
+        isChange = false;
     }
 }
 
-void Cache::expire(){
+void Cache::expire() noexcept {
     std::thread([this]() {
         while (true) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -155,4 +155,9 @@ void Cache::expire(){
             }
         }
     }).detach();
+}
+
+Cache::~Cache(){
+    isChange = true;
+    save();
 }

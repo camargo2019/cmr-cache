@@ -21,210 +21,178 @@
 
 #include "manager.h"
 
-Manager::Manager(boost::asio::ip::tcp::socket socket, Cache& cache, std::function<void()> onDisconnect)
-    : socket_(std::move(socket)), cache_(cache), onDisconnect_(onDisconnect) {}
+Manager::Manager(boost::asio::ip::tcp::socket socket, Cache& cache, std::function<void()> onDisconnect, ConfigConnect& ConfigConn)
+    : socket_(std::move(socket)), cache_(cache), onDisconnect_(onDisconnect), ConfigConn_(ConfigConn) {}
 
 Manager::~Manager() {
     onDisconnect_();
 }
 
-void Manager::run(){
+void Manager::run() noexcept {
     read();
 }
 
-void Manager::read(){
+void Manager::read() noexcept {
     auto self(shared_from_this());
-    std::string remoteIp = socket_.remote_endpoint().address().to_string();
 
-    auto findIP = std::find(ConfigConn.auth.allow_ip.begin(), ConfigConn.auth.allow_ip.end(), remoteIp);
-    if (findIP != ConfigConn.auth.allow_ip.end() || ConfigConn.auth.allow_ip.size() == 0) {
-        boost::asio::async_read_until(socket_, boost::asio::dynamic_buffer(data_), "\n",
-            [this, self](boost::system::error_code ec, std::size_t length){
-                if (!ec) {
-                    invokeAction();
-                    read();
-                }
+    boost::asio::async_read_until(socket_, boost::asio::dynamic_buffer(data_), "\r\n",
+            [this, self](boost::system::error_code ec, std::size_t length) {
+                if (ec) return;
+                data_.erase(0, data_.find_first_not_of("\r\n"));
+                if (!data_.empty()) invokeAction();
+                data_.clear();
+                read();
             }
-        );
-    }else{
-        result(std::string("ERROR: IP is not on the released list"));
-        socket_.close();
-    }
-}
-
-void Manager::result(std::string value){
-    auto self(shared_from_this());
-    boost::asio::async_write(socket_, boost::asio::buffer(value),
-        [this, self](boost::system::error_code ec, std::size_t){
-            if (ec) socket_.close();
-        }
     );
 }
 
-void Manager::invokeAction(){
+void Manager::result(std::string value) noexcept {
+    boost::asio::async_write(socket_, boost::asio::buffer(value),
+        [this](boost::system::error_code ec, std::size_t){});
+}
+
+void Manager::invokeAction() noexcept {
     std::istringstream request(data_);
-    std::string command;
-    std::string value;
     std::vector<std::string> args;
+    std::string command;
+
+    request >> command;
+    boost::algorithm::to_upper(command);
+
+    if (std::find(commands.all.begin(), commands.all.end(), command) ==  commands.all.end()) return;
+
     char quote = '\0';
 
-    while (request >> std::ws) {
+    std::string value;
+
+    while (request) {
         char peekStream = request.peek();
 
         if (peekStream == '"' || peekStream == '\'') {
             quote = request.get();
-
-            char c;
             value.clear();
+            char c;
+            bool escape = false;
+
             while (request.get(c)) {
-                if (c == '\\') {
-                    char nextChar;
-                    request.get(nextChar);
-                    value.push_back(nextChar);
-                } else if (c == quote) {
-                    break;
-                } else {
+                if (escape) {
                     value.push_back(c);
+                    escape = false;
                 }
+                else if (c == '\\') escape = true;
+                else if (c == quote) break;
+                else value.push_back(c);
+            }
+        } else if (std::isspace(peekStream)) {
+            request.ignore();
+            if (!value.empty()) {
+                args.push_back(std::move(value));
+                value.clear();
             }
         } else {
             request >> value;
+            if (request) {
+                args.push_back(std::move(value));
+                value.clear();
+            }
         }
-
-        args.push_back(value);
     }
 
-    command = args[0];
-    args.erase(std::remove(args.begin(), args.end(), command), args.end());
+    if (!value.empty()) args.push_back(std::move(value));
 
-    if (std::find(commands.auth.begin(), commands.auth.end(), command) != commands.auth.end()) {
-        invokeAuth(args);
-    }
+    if (commands.auth == command) return invokeAuth(args);
 
-    if (std::find(commands.use.begin(), commands.use.end(), command) != commands.use.end()) {
-        invokeUse(args);
-    }
+    if (user.user.empty() && user.db.empty()) return result("ERROR: you are not authenticated");
+    if (commands.use == command) return invokeUse(args);
 
-    if (std::find(commands.get.begin(), commands.get.end(), command) != commands.get.end()) {
-        invokeGet(args);
-    }
+    if (user.db == "*") return result("ERROR: use the USE DB command to choose the name of the database instance");
+    if (commands.get == command) return invokeGet(args);
+    if (commands.set == command) return invokeSet(args);
+    if (commands.del == command) return invokeDel(args);
+    if (commands.keys == command) return invokeKeys(args);
 
-    if (std::find(commands.set.begin(), commands.set.end(), command) != commands.set.end()) {
-        invokeSet(args);
-    }
-
-    if (std::find(commands.del.begin(), commands.del.end(), command) != commands.del.end()) {
-        invokeDel(args);
-    }
-
-    if (std::find(commands.keys.begin(), commands.keys.end(), command) != commands.keys.end()) {
-        invokeKeys(args);
-    }
-
-    data_.clear();
+    return result("ERROR: incorrect command");
 }
 
-void Manager::invokeDel(std::vector<std::string> args){
-    if (user.user.empty() && user.db.empty()) return result(std::string("ERROR: you need to authenticate"));
-    if (user.db == "*") return result(std::string("ERROR: use the USE DB command to choose the name of the database instance"));
-    if (args[0].empty()) return result(std::string("ERROR: use DEL KEY"));
+void Manager::invokeDel(std::vector<std::string> args) noexcept {
+    if (args[0].empty()) return result("ERROR: use DEL KEY");
 
     if (!cache_.del(user.db, args[0])){
-        return result(std::string("ERROR: there is no record for this key"));
+        return result("ERROR: there is no record for this key");
     }
 
-    scheduleSave();
-
-    result(std::string("SUCCESS: data deleted successfully"));
+    result("SUCCESS: data deleted successfully");
 }
 
-void Manager::invokeSet(std::vector<std::string> args){
-    if (user.user.empty() && user.db.empty()) return result(std::string("ERROR: you need to authenticate"));
-    if (user.db == "*") return result(std::string("ERROR: use the USE DB command to choose the name of the database instance"));
-    if (args[0].empty() || args[1].empty()) return result(std::string("ERROR: use SET KEY VALUE (EXPIRE)"));
+void Manager::invokeSet(std::vector<std::string> args) {
+    if (args.size() < 2 || args[0].empty() || args[1].empty()) return result("ERROR: use SET KEY VALUE (EXPIRE)");
 
     int expire = -1;
-    if (args.size() > 2 && !args[2].empty()){
-        try {
-            expire = std::stoi(args[2]);
-        }catch (std::exception& e){
-            std::cout << "Failed: " << e.what() << std::endl;
+    if (args.size() > 2 && !args[2].empty()) {
+        const char* begin = args[2].c_str();
+        const char* end = begin + args[2].size();
+        auto [ptr, ec] = std::from_chars(begin, end, expire);
+
+        if (ec != std::errc() || ptr != end) {
+            return result("ERROR: invalid expire time format");
         }
     }
 
-    if (!cache_.set(user.db, args[0], args[1], expire)){
-        return result(std::string("ERROR: failed to enter data"));
+    if (!cache_.set(user.db, args[0], args[1], expire)) {
+        return result("ERROR: failed to enter data");
     }
 
-    scheduleSave();
+    return result("SUCCESS: data saved successfully");
 
-    result(std::string("SUCCESS: data saved successfully"));
 }
 
-void Manager::invokeGet(std::vector<std::string> args){
-    if (user.user.empty() && user.db.empty()) return result(std::string("ERROR: you need to authenticate"));
-    if (user.db == "*") return result(std::string("ERROR: use the `USE DB` command to choose the name of the database instance"));
-    if (args[0].empty()) return result(std::string("ERROR: use GET KEY"));
+void Manager::invokeGet(std::vector<std::string> args) noexcept {
+    if (args[0].empty()) return result("ERROR: use GET KEY");
 
     std::string value = cache_.get(user.db, args[0]);
     if (value.empty()){
-        return result(std::string("ERROR: there is no record for this key"));
+        return result("ERROR: there is no record for this key");
     }
 
-    result(std::string("SUCCESS: " + value));
+    result("SUCCESS: " + value);
 }
 
-void Manager::invokeUse(std::vector<std::string> args){
-    if (user.user.empty() && user.db.empty()) return result(std::string("ERROR: you need to authenticate"));
-    if (args[0].empty()) return result(std::string("ERROR: use the `USE DB` command to choose the name of the database instance"));
+void Manager::invokeUse(std::vector<std::string> args) noexcept {
+    if (args[0].empty()) return result("ERROR: use the `USE DB` command to choose the name of the database instance");
 
-    for (const auto& auth : ConfigConn.auth.basic) {
+    for (const auto& auth : ConfigConn_.auth.basic) {
         if (auth.user == user.user && auth.db == "*"){
             user.db = args[0];
 
-            return result(std::string("SUCCESS: you have successfully changed the database"));
+            return result("SUCCESS: you have successfully changed the database");
         }
     }
 
-    return result(std::string("ERROR: you are not allowed to do this"));
+    result("ERROR: you are not allowed to do this");
 }
 
-void Manager::invokeAuth(std::vector<std::string> args){
-    if (!user.user.empty() && !user.db.empty()) return result(std::string("ERROR: you are authenticated"));
-    if (args[0].empty() || args[1].empty()) return result(std::string("ERROR: use AUTH USER PASS"));
+void Manager::invokeAuth(std::vector<std::string> args) noexcept {
+    if (args[0].empty() || args[1].empty()) return result("ERROR: use AUTH USER PASS");
 
-    for (const auto& auth : ConfigConn.auth.basic) {
+    for (const auto& auth : ConfigConn_.auth.basic) {
         if (auth.user == args[0] && auth.pass == args[1]){
             user.user = auth.user;
             user.db = auth.db;
 
-            return result(std::string("SUCCESS: authenticated"));
+            return result("SUCCESS: authenticated");
         }
     }
 
-    result(std::string("ERROR: failed to authenticate"));
+    result("ERROR: failed to authenticate");
 }
 
-void Manager::invokeKeys(std::vector<std::string> args){
-    if (user.user.empty() && user.db.empty()) return result(std::string("ERROR: you need to authenticate"));
-    if (user.db == "*") return result(std::string("ERROR: use the `USE DB` command to choose the name of the database instance"));
-
+void Manager::invokeKeys(std::vector<std::string> args) noexcept {
     std::string messageKeys;
     std::vector<std::string> keys = cache_.keys(user.db);
     for (const std::string& key : keys) {
         messageKeys += key + "\n";
     }
 
-    return result(std::string("SUCCESS: \r\n" + messageKeys));
+    return result("SUCCESS: \r\n" + messageKeys);
 }
 
-void Manager::scheduleSave(){
-    if (!saveRunning_){
-        saveRunning_ = true;
-         std::thread([this]() {
-            std::this_thread::sleep_for(std::chrono::seconds(10));
-            cache_.save();
-            saveRunning_ = false;
-        }).detach();
-    }
-}

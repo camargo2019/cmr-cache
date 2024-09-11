@@ -24,38 +24,48 @@
 CoreSocket::CoreSocket(boost::asio::io_context& io_context, std::string ip, short port, Cache& cache_)
     : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)),
       cache_(cache_), client_(0), socket_(io_context) {
+        acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
+        acceptor_.set_option(boost::asio::ip::tcp::no_delay(true));
         accept();
         ping();
 }
 
-void CoreSocket::accept() {
+void CoreSocket::accept() noexcept {
     acceptor_.async_accept(
-        [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
-            if (!ec) {
-                if (client_ < ConfigConn.max_clients) {
+            [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
+                if (!ec) {
+                    if (client_ > ConfigConn.max_clients)  {
+                        boost::asio::write(socket, boost::asio::buffer("ERROR: maximum connections reached"));
+                        return;
+                    }
+
+                    std::string remoteIp = socket.remote_endpoint().address().to_string();
+                    auto findIP = std::find(ConfigConn.auth.allow_ip.begin(), ConfigConn.auth.allow_ip.end(), remoteIp);
+                    if (findIP == ConfigConn.auth.allow_ip.end() && ConfigConn.auth.allow_ip.size() > 0) {
+                        boost::asio::write(socket, boost::asio::buffer("ERROR: IP is not on the released list"));
+                        return;
+                    }
+
                     ++client_;
                     std::make_shared<Manager>(std::move(socket), cache_, [this](){
                         --client_;
-                    })->run();
-                } else {
-                    std::string message = "ERROR: maximum connections reached";
-                    boost::asio::write(socket, boost::asio::buffer(message));
-                }
-            }
+                    }, ConfigConn)->run();
 
-            accept();
+                    accept();
+                }
         }
     );
 }
 
-void CoreSocket::ping() {
+void CoreSocket::ping() noexcept {
     std::thread([this](){
         while (true) {
             if (socket_.is_open()) {
                 boost::asio::write(socket_, boost::asio::buffer(std::string("PING\r\n")));
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds(5));
+            cache_.save();
+            std::this_thread::sleep_for(std::chrono::seconds(15));
         }
     }).detach();
 }

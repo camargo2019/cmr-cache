@@ -53,15 +53,17 @@
     class Cache {
         public:
             Cache ();
-            std::string get(std::string db, std::string key);
-            bool set(std::string db, std::string key, std::string value, int expire = -1);
-            bool del(std::string db, std::string key);
-            std::vector<std::string> keys (std::string db);
-            void save();
-            void expire();
+            std::string get(const std::string& db, const std::string& key) noexcept;
+            bool set(const std::string& db, const std::string& key, const std::string& value, int expire = -1) noexcept;
+            bool del(const std::string& db, const std::string& key) noexcept;
+            std::vector<std::string> keys(const std::string& db) noexcept;
+            void save() noexcept;
+            void expire() noexcept;
+            ~Cache();
 
         private:
             std::unordered_map<std::string, std::unordered_map<std::string, CacheStruct>> cache_;
+            bool isChange = false;
     };
 
 #endif
