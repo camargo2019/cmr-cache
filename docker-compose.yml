@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  cache:
+    container_name: cmr-cache
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "6347:6347"
+    volumes: 
+      - cmr-cache-data:/usr/cmr-cache/data/
+
+
+volumes:
+  cmr-cache-data:
+    driver: local
