@@ -36,8 +36,8 @@
             CoreSocket(boost::asio::io_context& io_context, std::string, short port, Cache& cache_);
             
         private:
-            void accept();
-            void ping();
+            void accept() noexcept;
+            void ping() noexcept;
 
             Cache& cache_;
             std::atomic<int> client_;

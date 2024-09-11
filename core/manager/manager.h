@@ -29,47 +29,50 @@
     #include <iostream>
     #include <stdexcept>
     #include <functional>
+    #include <charconv>
+    #include <system_error>
     #include <unordered_map>
     #include <boost/asio.hpp>
+    #include <boost/algorithm/string.hpp>
     #include "../entities/user.h"
     #include "../entities/config.h"
 
     struct ManagerCommands {
-        std::vector<std::string> set = {"SET", "set"};
-        std::vector<std::string> del = {"DEL", "del"};
-        std::vector<std::string> get = {"GET", "get"};
-        std::vector<std::string> auth = {"AUTH", "auth"};
-        std::vector<std::string> use = {"USE", "use"};
-        std::vector<std::string> keys = {"KEYS", "keys"};
+        std::string set = "SET";
+        std::string del = "DEL";
+        std::string get = "GET";
+        std::string auth = "AUTH";
+        std::string use = "USE";
+        std::string keys = "KEYS";
+        std::vector<std::string> all = {"SET", "DEL", "GET", "AUTH", "USE", "KEYS"};
     };
 
 
     class Manager: public std::enable_shared_from_this<Manager> {
         public:
-            Manager(boost::asio::ip::tcp::socket socket, Cache& cache, std::function<void()> onDisconnect);
-            void run();
+            Manager(boost::asio::ip::tcp::socket socket, Cache& cache, std::function<void()> onDisconnect, ConfigConnect& ConfigConn);
+            void run() noexcept;
 
             ~Manager();
 
         private:
-            void read();
-            void result(std::string value);
-            void invokeAction();
-            void invokeDel(std::vector<std::string> args);
+            void read() noexcept;
+            void result(std::string value) noexcept;
+            void invokeAction() noexcept;
+            void invokeDel(std::vector<std::string> args) noexcept;
             void invokeSet(std::vector<std::string> args);
-            void invokeGet(std::vector<std::string> args);
-            void invokeAuth(std::vector<std::string> args);
-            void invokeUse(std::vector<std::string> args);
-            void invokeKeys(std::vector<std::string> args);
-            void scheduleSave();
+            void invokeGet(std::vector<std::string> args) noexcept;
+            void invokeAuth(std::vector<std::string> args) noexcept;
+            void invokeUse(std::vector<std::string> args) noexcept;
+            void invokeKeys(std::vector<std::string> args) noexcept;
 
-            boost::asio::ip::tcp::socket socket_;
-            std::string data_;
             Cache& cache_;
-            ManagerCommands commands;
+            std::string data_;
             UserEntities user;
-            ConfigConnect ConfigConn = Config::getConfigConnect();
-            std::function<void()> onDisconnect_;
+            ManagerCommands commands;
             bool saveRunning_ = false;
+            std::function<void()> onDisconnect_;
+            boost::asio::ip::tcp::socket socket_;
+            ConfigConnect& ConfigConn_;
     };
 #endif
