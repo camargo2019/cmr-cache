@@ -70,12 +70,14 @@
 
                 Yaml::Node& authIPs = auth["allow-ip"];
 
-                if (authIPs.IsSequence() == false){
-                    throw std::runtime_error("ERROR: allow-ip is not a sequence in config/connect.yaml");
-                }
+                if (!authIPs.IsNone()){
+                    if (authIPs.IsSequence() == false){
+                        throw std::runtime_error("ERROR: allow-ip is not a sequence in config/connect.yaml");
+                    }
 
-                for (auto aIP = authIPs.Begin(); aIP != authIPs.End(); aIP++){
-                    config_connect.auth.allow_ip.push_back((*aIP).second.As<std::string>());
+                    for (auto aIP = authIPs.Begin(); aIP != authIPs.End(); aIP++){
+                        config_connect.auth.allow_ip.push_back((*aIP).second.As<std::string>());
+                    }
                 }
 
                 Yaml::Node& basicAuth = auth["basic"];

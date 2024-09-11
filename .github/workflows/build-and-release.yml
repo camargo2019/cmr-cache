@@ -19,10 +19,6 @@ jobs:
                    choco install llvm
                    curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
                    unzip boost.zip -d boost
-          - os: fedora-latest
-            install: sudo dnf install -y clang boost-devel
-          - os: centos-latest
-            install: sudo yum install -y clang boost-devel
 
     steps:
       - name: Checkout code
