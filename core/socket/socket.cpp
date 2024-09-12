@@ -22,10 +22,16 @@
 #include "socket.h"
 
 CoreSocket::CoreSocket(boost::asio::io_context& io_context, std::string ip, short port, Cache& cache_)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(ip), port)),
-      cache_(cache_), client_(0), socket_(io_context) {
-        acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
+    : acceptor_(io_context), cache_(cache_), client_(0), socket_(io_context) {            
+        boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address_v4(ip), port);
+        acceptor_.open(endpoint.protocol());
+
+        acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
         acceptor_.set_option(boost::asio::ip::tcp::no_delay(true));
+
+        acceptor_.bind(endpoint);
+        acceptor_.listen(boost::asio::socket_base::max_listen_connections);
+
         accept();
         ping();
 }

@@ -31,6 +31,7 @@
     #include <functional>
     #include <charconv>
     #include <system_error>
+    #include <unordered_set>
     #include <unordered_map>
     #include <boost/asio.hpp>
     #include <boost/algorithm/string.hpp>
@@ -44,7 +45,7 @@
         std::string auth = "AUTH";
         std::string use = "USE";
         std::string keys = "KEYS";
-        std::vector<std::string> all = {"SET", "DEL", "GET", "AUTH", "USE", "KEYS"};
+        std::unordered_set<std::string> all = {"AUTH", "USE", "GET", "SET", "DEL", "KEYS"};
     };
 
 
@@ -58,7 +59,7 @@
         private:
             void read() noexcept;
             void result(std::string value) noexcept;
-            void invokeAction() noexcept;
+            void invokeAction(const std::string& line) noexcept;
             void invokeDel(std::vector<std::string> args) noexcept;
             void invokeSet(std::vector<std::string> args);
             void invokeGet(std::vector<std::string> args) noexcept;
@@ -74,5 +75,6 @@
             std::function<void()> onDisconnect_;
             boost::asio::ip::tcp::socket socket_;
             ConfigConnect& ConfigConn_;
+            std::array<char, 1024> buffer_;
     };
 #endif

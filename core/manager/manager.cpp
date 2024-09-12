@@ -35,12 +35,22 @@ void Manager::run() noexcept {
 void Manager::read() noexcept {
     auto self(shared_from_this());
 
-    boost::asio::async_read_until(socket_, boost::asio::dynamic_buffer(data_), "\r\n",
-            [this, self](boost::system::error_code ec, std::size_t length) {
+    socket_.async_read_some(
+            boost::asio::buffer(buffer_),
+            [this, self](const boost::system::error_code& ec, std::size_t length) {
                 if (ec) return;
-                data_.erase(0, data_.find_first_not_of("\r\n"));
-                if (!data_.empty()) invokeAction();
-                data_.clear();
+                data_.append(buffer_.data(), length);
+
+                std::size_t start = 0;
+                std::size_t pos;
+
+                while ((pos = data_.find("\r\n", start)) != std::string::npos) {
+                    std::string line = data_.substr(start, pos - start);
+                    invokeAction(line);
+                    start = pos + 2;
+                }
+
+                data_.erase(0, start);
                 read();
             }
     );
@@ -51,50 +61,51 @@ void Manager::result(std::string value) noexcept {
         [this](boost::system::error_code ec, std::size_t){});
 }
 
-void Manager::invokeAction() noexcept {
-    std::istringstream request(data_);
+void Manager::invokeAction(const std::string& line) noexcept {
     std::vector<std::string> args;
     std::string command;
 
-    request >> command;
-    boost::algorithm::to_upper(command);
+    const char* ptr = line.c_str();
+    const char* end = ptr + line.size();
 
-    if (std::find(commands.all.begin(), commands.all.end(), command) ==  commands.all.end()) return;
+    while (ptr != end && !std::isspace(*ptr)) {
+        command.push_back(std::toupper(*ptr));
+        ++ptr;
+    }
 
-    char quote = '\0';
+    if (commands.all.find(command) == commands.all.end()) return result("ERROR: incorrect command");
+
+    while (ptr != end && std::isspace(*ptr)) ++ptr;
 
     std::string value;
+    char quote = '\0';
+    bool escape = false;
 
-    while (request) {
-        char peekStream = request.peek();
+    while (ptr != end) {
+        char c = *ptr++;
 
-        if (peekStream == '"' || peekStream == '\'') {
-            quote = request.get();
-            value.clear();
-            char c;
-            bool escape = false;
-
-            while (request.get(c)) {
-                if (escape) {
-                    value.push_back(c);
-                    escape = false;
-                }
-                else if (c == '\\') escape = true;
-                else if (c == quote) break;
-                else value.push_back(c);
+        if (quote) {
+            if (escape) {
+                value.push_back(c);
+                escape = false;
+            } else if (c == '\\') {
+                escape = true;
+            } else if (c == quote) {
+                quote = '\0';
+                args.push_back(std::move(value));
+                value.clear();
+            } else {
+                value.push_back(c);
             }
-        } else if (std::isspace(peekStream)) {
-            request.ignore();
+        } else if (c == '"' || c == '\'') {
+            quote = c;
+        } else if (std::isspace(c)) {
             if (!value.empty()) {
                 args.push_back(std::move(value));
                 value.clear();
             }
         } else {
-            request >> value;
-            if (request) {
-                args.push_back(std::move(value));
-                value.clear();
-            }
+            value.push_back(c);
         }
     }
 
@@ -110,8 +121,6 @@ void Manager::invokeAction() noexcept {
     if (commands.set == command) return invokeSet(args);
     if (commands.del == command) return invokeDel(args);
     if (commands.keys == command) return invokeKeys(args);
-
-    return result("ERROR: incorrect command");
 }
 
 void Manager::invokeDel(std::vector<std::string> args) noexcept {
