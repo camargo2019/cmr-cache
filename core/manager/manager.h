@@ -26,10 +26,11 @@
     #include <vector>
     #include <memory>
     #include <chrono>
+    #include <charconv>
     #include <iostream>
     #include <stdexcept>
     #include <functional>
-    #include <charconv>
+    #include <string_view>
     #include <system_error>
     #include <unordered_set>
     #include <unordered_map>
@@ -38,16 +39,22 @@
     #include "../entities/user.h"
     #include "../entities/config.h"
 
-    struct ManagerCommands {
+    struct ManagerCommand {
         std::string set = "SET";
-        std::string del = "DEL";
         std::string get = "GET";
-        std::string auth = "AUTH";
         std::string use = "USE";
+        std::string del = "DEL";
+        std::string auth = "AUTH";
         std::string keys = "KEYS";
-        std::unordered_set<std::string> all = {"AUTH", "USE", "GET", "SET", "DEL", "KEYS"};
-    };
+        
+        std::unordered_set<std::string> authenticated = {
+            "GET", "SET", "USE", "DEL", "KEYS"
+        };
 
+        std::unordered_set<std::string> selected_database = {
+            "GET", "SET", "DEL", "KEYS"
+        };
+    };
 
     class Manager: public std::enable_shared_from_this<Manager> {
         public:
@@ -58,23 +65,24 @@
 
         private:
             void read() noexcept;
-            void result(std::string value) noexcept;
-            void invokeAction(const std::string& line) noexcept;
-            void invokeDel(std::vector<std::string> args) noexcept;
-            void invokeSet(std::vector<std::string> args);
-            void invokeGet(std::vector<std::string> args) noexcept;
-            void invokeAuth(std::vector<std::string> args) noexcept;
-            void invokeUse(std::vector<std::string> args) noexcept;
-            void invokeKeys(std::vector<std::string> args) noexcept;
+            void result(const std::string& value) noexcept;
+            void invokeAction(const std::string_view& line) noexcept;
+            void invokeDel(const std::vector<std::string>& args) noexcept;
+            void invokeSet(const std::vector<std::string>& args) noexcept;
+            void invokeGet(const std::vector<std::string>& args) noexcept;
+            void invokeAuth(const std::vector<std::string>& args) noexcept;
+            void invokeUse(const std::vector<std::string>& args) noexcept;
+            void invokeKeys(const std::vector<std::string>& args) noexcept;
 
             Cache& cache_;
             std::string data_;
             UserEntities user;
-            ManagerCommands commands;
             bool saveRunning_ = false;
             std::function<void()> onDisconnect_;
             boost::asio::ip::tcp::socket socket_;
             ConfigConnect& ConfigConn_;
-            std::array<char, 1024> buffer_;
+            ManagerCommand Command;
+            std::array<char, 65536> buffer_;
+            std::unordered_map<std::string, void (Manager::*)(const std::vector<std::string>& args) noexcept> command_map;
     };
 #endif

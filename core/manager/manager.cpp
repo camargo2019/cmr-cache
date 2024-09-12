@@ -22,7 +22,14 @@
 #include "manager.h"
 
 Manager::Manager(boost::asio::ip::tcp::socket socket, Cache& cache, std::function<void()> onDisconnect, ConfigConnect& ConfigConn)
-    : socket_(std::move(socket)), cache_(cache), onDisconnect_(onDisconnect), ConfigConn_(ConfigConn) {}
+    : socket_(std::move(socket)), cache_(cache), onDisconnect_(onDisconnect), ConfigConn_(ConfigConn) {
+        command_map[Command.auth] = &Manager::invokeAuth;
+        command_map[Command.use] = &Manager::invokeUse;
+        command_map[Command.get] = &Manager::invokeGet;
+        command_map[Command.set] = &Manager::invokeSet;
+        command_map[Command.del] = &Manager::invokeDel;
+        command_map[Command.keys] = &Manager::invokeKeys;
+}
 
 Manager::~Manager() {
     onDisconnect_();
@@ -38,14 +45,17 @@ void Manager::read() noexcept {
     socket_.async_read_some(
             boost::asio::buffer(buffer_),
             [this, self](const boost::system::error_code& ec, std::size_t length) {
-                if (ec) return;
+                if (ec) {
+                    std::cerr << "Erro ao ler do socket: " << ec.message() << std::endl;
+                    return;
+                };
                 data_.append(buffer_.data(), length);
 
                 std::size_t start = 0;
                 std::size_t pos;
 
                 while ((pos = data_.find("\r\n", start)) != std::string::npos) {
-                    std::string line = data_.substr(start, pos - start);
+                    std::string_view line(data_.data() + start, pos - start);
                     invokeAction(line);
                     start = pos + 2;
                 }
@@ -56,24 +66,33 @@ void Manager::read() noexcept {
     );
 }
 
-void Manager::result(std::string value) noexcept {
-    boost::asio::async_write(socket_, boost::asio::buffer(value),
-        [this](boost::system::error_code ec, std::size_t){});
+void Manager::result(const std::string& value) noexcept {
+    boost::asio::async_write(socket_, boost::asio::buffer(value), [this](const boost::system::error_code& ec, std::size_t _) {});
 }
 
-void Manager::invokeAction(const std::string& line) noexcept {
+void Manager::invokeAction(const std::string_view& line) noexcept {
     std::vector<std::string> args;
-    std::string command;
+    char useCommand[5] = {0};
 
-    const char* ptr = line.c_str();
+    const char* ptr = line.data();
     const char* end = ptr + line.size();
 
-    while (ptr != end && !std::isspace(*ptr)) {
-        command.push_back(std::toupper(*ptr));
+    int i = 0;
+    while (ptr != end && !std::isspace(*ptr) && i < 4) {
+        useCommand[i++] += std::toupper(*ptr);
         ++ptr;
     }
 
-    if (commands.all.find(command) == commands.all.end()) return result("ERROR: incorrect command");
+    auto action = command_map.find(useCommand);
+    if (action == command_map.end()) return result("ERROR: incorrect command");
+
+    if (user.user.empty() && user.db.empty() && Command.authenticated.find(useCommand) != Command.authenticated.end()) {
+        return result("ERROR: you are not authenticated");
+    }
+
+    if (user.db == "*" && Command.selected_database.find(useCommand) != Command.selected_database.end()) {
+        return result("ERROR: use the USE DB command to choose the name of the database instance");
+    }
 
     while (ptr != end && std::isspace(*ptr)) ++ptr;
 
@@ -86,7 +105,7 @@ void Manager::invokeAction(const std::string& line) noexcept {
 
         if (quote) {
             if (escape) {
-                value.push_back(c);
+                value += c;
                 escape = false;
             } else if (c == '\\') {
                 escape = true;
@@ -95,7 +114,7 @@ void Manager::invokeAction(const std::string& line) noexcept {
                 args.push_back(std::move(value));
                 value.clear();
             } else {
-                value.push_back(c);
+                value += c;
             }
         } else if (c == '"' || c == '\'') {
             quote = c;
@@ -105,25 +124,15 @@ void Manager::invokeAction(const std::string& line) noexcept {
                 value.clear();
             }
         } else {
-            value.push_back(c);
+            value += c;
         }
     }
 
     if (!value.empty()) args.push_back(std::move(value));
-
-    if (commands.auth == command) return invokeAuth(args);
-
-    if (user.user.empty() && user.db.empty()) return result("ERROR: you are not authenticated");
-    if (commands.use == command) return invokeUse(args);
-
-    if (user.db == "*") return result("ERROR: use the USE DB command to choose the name of the database instance");
-    if (commands.get == command) return invokeGet(args);
-    if (commands.set == command) return invokeSet(args);
-    if (commands.del == command) return invokeDel(args);
-    if (commands.keys == command) return invokeKeys(args);
+    (this->*(action->second))(args);
 }
 
-void Manager::invokeDel(std::vector<std::string> args) noexcept {
+void Manager::invokeDel(const std::vector<std::string>& args) noexcept {
     if (args[0].empty()) return result("ERROR: use DEL KEY");
 
     if (!cache_.del(user.db, args[0])){
@@ -133,7 +142,7 @@ void Manager::invokeDel(std::vector<std::string> args) noexcept {
     result("SUCCESS: data deleted successfully");
 }
 
-void Manager::invokeSet(std::vector<std::string> args) {
+void Manager::invokeSet(const std::vector<std::string>& args) noexcept {
     if (args.size() < 2 || args[0].empty() || args[1].empty()) return result("ERROR: use SET KEY VALUE (EXPIRE)");
 
     int expire = -1;
@@ -155,7 +164,7 @@ void Manager::invokeSet(std::vector<std::string> args) {
 
 }
 
-void Manager::invokeGet(std::vector<std::string> args) noexcept {
+void Manager::invokeGet(const std::vector<std::string>& args) noexcept {
     if (args[0].empty()) return result("ERROR: use GET KEY");
 
     std::string value = cache_.get(user.db, args[0]);
@@ -163,10 +172,10 @@ void Manager::invokeGet(std::vector<std::string> args) noexcept {
         return result("ERROR: there is no record for this key");
     }
 
-    result("SUCCESS: " + value);
+    result("SUCCESS: $"+std::to_string(value.size())+"\r\n" + value);
 }
 
-void Manager::invokeUse(std::vector<std::string> args) noexcept {
+void Manager::invokeUse(const std::vector<std::string>& args) noexcept {
     if (args[0].empty()) return result("ERROR: use the `USE DB` command to choose the name of the database instance");
 
     for (const auto& auth : ConfigConn_.auth.basic) {
@@ -180,7 +189,7 @@ void Manager::invokeUse(std::vector<std::string> args) noexcept {
     result("ERROR: you are not allowed to do this");
 }
 
-void Manager::invokeAuth(std::vector<std::string> args) noexcept {
+void Manager::invokeAuth(const std::vector<std::string>& args) noexcept {
     if (args[0].empty() || args[1].empty()) return result("ERROR: use AUTH USER PASS");
 
     for (const auto& auth : ConfigConn_.auth.basic) {
@@ -195,13 +204,13 @@ void Manager::invokeAuth(std::vector<std::string> args) noexcept {
     result("ERROR: failed to authenticate");
 }
 
-void Manager::invokeKeys(std::vector<std::string> args) noexcept {
+void Manager::invokeKeys(const std::vector<std::string>& args) noexcept {
     std::string messageKeys;
     std::vector<std::string> keys = cache_.keys(user.db);
     for (const std::string& key : keys) {
         messageKeys += key + "\n";
     }
 
-    return result("SUCCESS: \r\n" + messageKeys);
+    return result("SUCCESS: $"+std::to_string(messageKeys.size())+"\r\n" + messageKeys);
 }
 
