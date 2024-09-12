@@ -76,8 +76,12 @@ std::string Cache::get(const std::string& db, const std::string& key) noexcept {
 }
 
 bool Cache::set(const std::string& db, const std::string& key, const std::string& value, int expire) noexcept {
-    CacheStruct data{std::move(value), expire};
-    cache_[db].insert_or_assign(key, std::move(data));
+    CacheStruct data{value, expire};
+    auto& dbData = cache_[db];
+
+    dbData.reserve(dbData.size() + 1);
+
+    auto result = dbData.emplace(key, std::move(data)); 
     isChange = true;
 
     return true;
