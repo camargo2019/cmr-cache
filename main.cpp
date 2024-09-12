@@ -29,7 +29,15 @@ int main(){
         boost::asio::io_context io_context;
         ConfigHosting ConfigHost = Config::getConfigHost();
         CoreSocket server(io_context, ConfigHost.address, ConfigHost.port, cache_);
-        io_context.run();
+
+        std::vector<std::thread> threads;
+        for (std::size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
+            threads.emplace_back([&io_context]() { io_context.run(); });
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
     }
     catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << "\n";
