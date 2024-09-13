@@ -26,7 +26,7 @@
     #include <fstream>
     #include <iostream>
     #include <stdexcept>
-    #include <yaml.cpp>
+    #include <yaml/yaml.cpp>
 
     struct ConfigConnectBasicAuth{
         std::string user;
