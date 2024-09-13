@@ -7,3 +7,4 @@ data/*.dat
 *.pdb
 *.ilk
 .vs/
+run-tests*

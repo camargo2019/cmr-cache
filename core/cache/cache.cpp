@@ -91,7 +91,7 @@ bool Cache::del(const std::string& db, const std::string& key) noexcept {
     cache_[db].erase(key);
     isChange = true;
 
-    return false;
+    return true;
 }
 
 std::vector<std::string> Cache::keys(const std::string& db) noexcept {
