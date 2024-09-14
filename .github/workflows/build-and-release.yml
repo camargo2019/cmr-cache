@@ -11,26 +11,34 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04, windows-latest, windows-2022, windows-2019]
+        arch: [x64, x86]
         include:
           - os: ubuntu-latest
+            build: linux
             install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
           - os: ubuntu-24.04
+            build: linux
             install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
           - os: ubuntu-22.04
+            build: linux
             install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
           - os: ubuntu-20.04
+            build: linux
             install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
           - os: windows-latest
+            build: windows
             install: |
                    choco install llvm
                    curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
                    unzip boost.zip -d boost
           - os: windows-2022
+            build: windows
             install: |
                    choco install llvm
                    curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
                    unzip boost.zip -d boost
           - os: windows-2019
+            build: windows
             install: |
                    choco install llvm
                    curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
@@ -41,19 +49,27 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Clang
-        if: matrix.os == 'windows-latest'
+        if: matrix.build == "windows"
         uses: egor-tensin/setup-clang@v1
 
       - name: Install dependencies
         run: ${{ matrix.install }}
 
-      - name: Build - Windows
-        if: matrix.os == 'windows-latest'
+      - name: Build - Windows (x64)
+        if: matrix.build == "windows" && matrix.arch == "x64"
         run: clang++ -o cmr_cache.exe main.cpp -I./vendor/ -I./boost/ -L./boost/lib -llibboost_system-vc143-mt-x64-1_85 -std=c++17
+
+      - name: Build - Windows (x86)
+        if: matrix.build == "windows" && matrix.arch == "x86"
+        run: clang++ -o cmr_cache.exe main.cpp -I./vendor/ -I./boost/ -L./boost/lib -llibboost_system-vc143-mt-x32-1_85 -std=c++17 -m32
       
-      - name: Build - Others OS
-        if: matrix.os != 'windows-latest'
+      - name: Build - Linux (x64)
+        if: matrix.build != "windows" && matrix.arch == "x64"
         run: clang++ -o cmr_cache main.cpp -I./vendor/ -I/usr/include/boost -L/usr/lib/x86_64-linux-gnu -lboost_system -lpthread -std=c++17
+
+      - name: Build - Linux (x86)
+        if: matrix.build != "windows" && matrix.arch == "x86"
+        run: clang++ -o cmr_cache main.cpp -I./vendor/ -I/usr/include/boost -L/usr/lib/i386-linux-gnu -lboost_system -lpthread -std=c++17 -m32
 
       - name: Get the tag
         run: echo "GITHUB_REF=${{ github.ref }}"
@@ -71,29 +87,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release Archive - Windows
-        if: matrix.os == 'windows-latest'
+        if: matrix.build == "windows"
         run: |
           mkdir -p release
           cp cmr_cache.exe release/
           cp -r config/ release/
           cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
+          tar -czf cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz release
 
       - name: Create Release Archive - Others OS
-        if: matrix.os != 'windows-latest'
+        if: matrix.build != "windows"
         run: |
           mkdir -p release
           cp cmr_cache release/
           cp -r config/ release/
           cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}.tar.gz release
+          tar -czf cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz release
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cmr_cache_${{ matrix.os }}.tar.gz
-          asset_name: cmr_cache_${{ matrix.os }}.tar.gz
+          asset_path: cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz
+          asset_name: cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz
           asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
