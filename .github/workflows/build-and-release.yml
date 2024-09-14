@@ -11,20 +11,19 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04, windows-latest, windows-2022, windows-2019]
-        arch: [x64, x86]
         include:
           - os: ubuntu-latest
             ostype: linux
-            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang g++-multilib
           - os: ubuntu-24.04
             ostype: linux
-            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang g++-multilib
           - os: ubuntu-22.04
             ostype: linux
-            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang g++-multilib
           - os: ubuntu-20.04
             ostype: linux
-            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang g++-multilib
           - os: windows-latest
             ostype: windows
             install: |
@@ -56,20 +55,12 @@ jobs:
         run: ${{ matrix.install }}
 
       - name: Build - Windows (x64)
-        if: matrix.ostype == 'windows' && matrix.arch == 'x64'
+        if: matrix.ostype == 'windows'
         run: clang++ -o cmr_cache.exe main.cpp -I./vendor/ -I./boost/ -L./boost/lib -llibboost_system-vc143-mt-x64-1_85 -std=c++17
 
-      - name: Build - Windows (x86)
-        if: matrix.ostype == 'windows' && matrix.arch == 'x86'
-        run: clang++ -o cmr_cache.exe main.cpp -I./vendor/ -I./boost/ -L./boost/lib -llibboost_system-vc143-mt-x32-1_85 -std=c++17 -m32
-      
       - name: Build - Linux (x64)
-        if: matrix.ostype != 'windows' && matrix.arch == 'x64'
+        if: matrix.ostype != 'windows'
         run: clang++ -o cmr_cache main.cpp -I./vendor/ -I/usr/include/boost -L/usr/lib/x86_64-linux-gnu -lboost_system -lpthread -std=c++17
-
-      - name: Build - Linux (x86)
-        if: matrix.ostype != 'windows' && matrix.arch == 'x86'
-        run: clang++ -o cmr_cache main.cpp -I./vendor/ -I/usr/include/boost -L/usr/lib/i386-linux-gnu -lboost_system -lpthread -std=c++17 -m32
 
       - name: Get the tag
         run: echo "GITHUB_REF=${{ github.ref }}"
@@ -93,7 +84,7 @@ jobs:
           cp cmr_cache.exe release/
           cp -r config/ release/
           cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz release
+          tar -czf cmr_cache_${{ matrix.os }}_x64.tar.gz release
 
       - name: Create Release Archive - Others OS
         if: matrix.ostype != 'windows'
@@ -102,14 +93,14 @@ jobs:
           cp cmr_cache release/
           cp -r config/ release/
           cp -r data/ release/
-          tar -czf cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz release
+          tar -czf cmr_cache_${{ matrix.os }}_x64.tar.gz release
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz
-          asset_name: cmr_cache_${{ matrix.os }}_${{ matrix.arch }}.tar.gz
+          asset_path: cmr_cache_${{ matrix.os }}_x64.tar.gz
+          asset_name: cmr_cache_${{ matrix.os }}_x64.tar.gz
           asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
