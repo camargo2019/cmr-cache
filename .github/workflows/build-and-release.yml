@@ -10,11 +10,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04, windows-latest, windows-2022, windows-2019]
         include:
           - os: ubuntu-latest
             install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
+          - os: ubuntu-24.04
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
+          - os: ubuntu-22.04
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
+          - os: ubuntu-20.04
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev clang
           - os: windows-latest
+            install: |
+                   choco install llvm
+                   curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
+                   unzip boost.zip -d boost
+          - os: windows-2022
+            install: |
+                   choco install llvm
+                   curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
+                   unzip boost.zip -d boost
+          - os: windows-2019
             install: |
                    choco install llvm
                    curl -L -o boost.zip https://storage.cmr.dev.br/boost.zip
