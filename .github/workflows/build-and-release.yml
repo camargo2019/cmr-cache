@@ -15,28 +15,16 @@ jobs:
         include:
           - os: ubuntu-latest
             ostype: linux
-            install: |
-              sudo dpkg --add-architecture i386
-              sudo apt-get update
-              sudo apt-get install libboost-all-dev libboost-all-dev:i386 clang g++-multilib libc++-dev libc++abi-dev
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
           - os: ubuntu-24.04
             ostype: linux
-            install: |
-              sudo dpkg --add-architecture i386
-              sudo apt-get update
-              sudo apt-get install libboost-all-dev libboost-all-dev:i386 clang g++-multilib libc++-dev libc++abi-dev
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
           - os: ubuntu-22.04
             ostype: linux
-            install: |
-              sudo dpkg --add-architecture i386
-              sudo apt-get update
-              sudo apt-get install libboost-all-dev libboost-all-dev:i386 clang g++-multilib libc++-dev libc++abi-dev
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
           - os: ubuntu-20.04
             ostype: linux
-            install: |
-              sudo dpkg --add-architecture i386
-              sudo apt-get update
-              sudo apt-get install libboost-all-dev libboost-all-dev:i386 clang g++-multilib libc++-dev libc++abi-dev
+            install: sudo apt-get update && sudo apt-get install -y libboost-all-dev:i386 clang g++-multilib
           - os: windows-latest
             ostype: windows
             install: |
